@@ -1,7 +1,7 @@
 # see: http://www.ocaml.info/home/ocaml_sources.html#toc16
 
 # put here the names of your source files (in the right order)
-SOURCES = src/Cfg.ml
+SOURCES = src/GetCfg.ml
 
 # the name of the resulting executable
 RESULT  = executable
