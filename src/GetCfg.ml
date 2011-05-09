@@ -81,7 +81,127 @@ let features : C.featureDescr list =
 
 let rec processOneFile (cil: C.file) =
   begin
-
+		Printf.printf "--------开始处理的文件\n%s\n" cil.fileName;		
+		Printf.printf "cil.globinitcalled=%b\n" cil.globinitcalled;
+		(*Frontc.parse cil.fileName;
+		Cfg.computeFileCFG cil;*)
+		
+		Printf.printf "length=cil.globals=%d\n" (List.length cil.globals);
+		
+		let fundec = getGlobInit cil in
+		Printf.printf "length=fundec.sallstmts=%d\n" (List.length fundec.sallstmts);
+		
+		
+		prepareCFG fundec;
+		computeCFGInfo fundec true;
+		Printf.printf "fundec.name=%s\n" fundec.svar.vname;
+		Printf.printf "cil.globinitcalled=%b\n" cil.globinitcalled;
+		Printf.printf "length=fundec.sallstmts=%d\n" (List.length fundec.sallstmts);
+		Printf.printf "fundec.smaxid=%d\n" fundec.smaxid;
+		
+		
+		Printf.printf "%s\n" "----cil.globals";
+		List.iter (function g ->
+			match g with
+				|	(GText text) ->	
+					Printf.printf "location.file=%s\n" text;
+				| (GVarDecl (varinfo,location)) -> 
+					Printf.printf "GVarDecl:location.file=%s\n" location.file;
+					Printf.printf "GVarDecl:varinfo.vname=%s\n" varinfo.vname;
+					printType plainCilPrinter () varinfo.vtype;
+					Format.print_string "\n";
+				| (GType (typeinfo,location)) -> 
+					Printf.printf "GType:location.file=%s\n" location.file;
+				| (GCompTag (compinfo,location)) -> 
+					Printf.printf "GCompTag:location.file=%s\n" location.file;
+				| (GCompTagDecl (compinfo,location)) -> 
+					Printf.printf "GCompTagDecl:location.file=%s\n" location.file;
+				| (GEnumTag (enuminfo,location)) -> 
+					Printf.printf "GEnumTag:location.file=%s\n" location.file;
+				| (GEnumTagDecl (enuminfo,location)) -> 
+					Printf.printf "GEnumTagDecl:location.file=%s\n" location.file;
+				| (GVarDecl (varinfo,location)) -> 
+					Printf.printf "GVarDecl:location.file=%s\n" location.file;
+				| (GVar (varinfo,initinfo,location)) -> 
+					Printf.printf "GVar:location.file=%s\n" location.file;
+					Printf.printf "Gvar:varinfo.vname=%s\n" varinfo.vname;
+				| (GFun (fundec,location)) -> 
+					Format.print_string "GFun:\n";
+					Printf.printf "\tlocation.file=%s\n" location.file;
+					Printf.printf "\tfundec.name=%s\n" fundec.svar.vname;
+					let num = Cfg.cfgFun fundec in
+					Printf.printf "\tCfg.cfgFun:num=%d\n" num;
+					
+					Cfg.printCfgFilename "/home/lzh/a.dot" fundec;
+					
+						let print_instr instr=
+							let doc = Cil.d_instr () instr in
+							let instrS= Pretty.sprint 80 doc in
+							Printf.printf "\t\t%s\n" instrS;
+						in
+						
+						let print_skind skind =
+							match skind with
+							| (Instr (instr)) ->
+								Format.print_string "\t\tInstr:=";
+								List.iter (fun ele ->
+								print_instr ele;
+								) instr;
+							| (Return (expr,location)) -> 
+								Printf.printf "\t\tReturn:location.file=%s\n" location.file;
+							|	(Break (location)) -> 
+								Printf.printf "\t\tBreak:location.file=%s\n" location.file;
+							| _ -> 
+								Printf.printf "\t\t%s\n" "I donnot konw.";
+							in
+							
+					List.iter (fun stmt ->
+						let doc = Cil.d_stmt () stmt in
+						let stmtS=Pretty.sprint 80 doc in
+						Printf.printf "\t\tsbody.bstmts:%s\n" stmtS;
+						)	fundec.sbody.bstmts;
+						
+					List.iter (fun stmt ->
+						let doc = Cil.d_stmt () stmt in
+						let stmtS=Pretty.sprint 80 doc in
+						Printf.printf "\t\tsbody.sallstmts:%s\n" stmtS;
+						)	fundec.sallstmts;
+						
+					Format.print_string "\n";
+				| (GAsm (asm,location)) -> 
+					Printf.printf "GAsm:location.file=%s\n" location.file;
+				| (GPragma (attribute,location)) -> 
+					Printf.printf "GPragma:location.file=%s\n" location.file;
+				| _ -> Printf.printf "%s\n" "I donnot konw.";
+			) cil.globals;
+		Printf.printf "%s\n" "++++cil.globals";
+		
+		
+		Printf.printf "fundec.svar.vname=%s\n" fundec.svar.vname;
+		Printf.printf "%s\n" "----fundec.slocals";
+		List.iter (fun varinfo ->
+			Printf.printf "%s\n" varinfo.vname;
+			) fundec.slocals;
+		Printf.printf "%s\n" "++++fundec.slocals";
+		
+		Printf.printf "%s\n" "----fundec.sformals";
+		List.iter (fun ele ->
+			Printf.printf "%s\n" ele.vname;
+			) fundec.sformals;
+		Printf.printf "%s\n" "++++fundec.sformals";
+		
+		Ast.compute ();
+		Db.INOUT.get_internal ();
+		
+		(*Printf.printf "%s\n" "----CFG";		
+		List.iter (fun ele ->
+			let num = Cfg.cfgFun fundec in
+			d_cfgnodename () ele;
+			) fundec.sallstmts;
+		Printf.printf "%s\n" "++++CFG";*)
+		
+		
+		
     if !Cilutil.doCheck then begin
       ignore (E.log "First CIL check\n");
       if not (CK.checkFile [] cil) && !Cilutil.strictChecking then begin
@@ -192,13 +312,28 @@ let theMain () =
     (* parse the command-line arguments *)
 		Format.print_string "before parse cmd\n";
 		Format.print_int !Arg.current;
-		
-		Format.print_int Arg.align.length;
+		Format.print_string "\n";
     Arg.parse (Arg.align argDescr) Ciloptions.recordFile usageMsg;
 		Format.print_string "after pare cmd\n";
     Cil.initCIL ();
 
     Ciloptions.fileNames := List.rev !Ciloptions.fileNames;
+		
+		Format.print_string "--------要处理的源文件如下:\n";
+		List.iter (
+			function name ->
+			 	Format.print_string name;
+				Format.print_string "\n";
+			) !Ciloptions.fileNames;
+		Format.print_string "--------要处理的源文件--------\n";
+		
+		(*let print_source_file_name (fname: string)=
+			Format.print_string fname;
+			Format.print_string "\n";
+			in
+		Format.print_string "--------要处理的源文件如下:\n";
+		List.map print_source_file_name !Ciloptions.fileNames;
+		Format.print_string "--------要处理的源文件--------\n";*)
 		
     if !Cilutil.testcil <> "" then begin
       Testcil.doit !Cilutil.testcil
@@ -221,7 +356,7 @@ let theMain () =
             (* See if we must save the merged file *)
             (match !mergedChannel with
               None -> ()
-            | Some mc -> begin
+            | 	Some mc -> begin
                 let oldpci = !C.print_CIL_Input in
                 C.print_CIL_Input := true;
                 Stats.time "printMerged"
@@ -230,7 +365,8 @@ let theMain () =
             end);
             merged
       in
-
+			Format.print_string "--------合并结束\n";
+			
       if !E.hadErrors then
         E.s (E.error "Cabs2cil had some errors");
 
