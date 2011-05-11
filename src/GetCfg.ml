@@ -1,9 +1,16 @@
 module F = Frontc
 module C = Cil
-module CK = Check
-module E = Errormsg
-open Pretty
+module CType=Cil_types
+(*module CK = Check
+module E = Errormsg*)
+open Pretty_source
 open Cil
+open Cil_types
+open Abstract_interp
+(*open Value_parameters*)
+open Plugin
+open Datatype
+open Cabs
 
 (*let file_name="/home/lzh/document/cil-1.3.7/test/small1/func.c";;
 let print_files_name=
@@ -28,10 +35,11 @@ type outfile =
 let outChannel : outfile option ref = ref None
 let mergedChannel : outfile option ref = ref None
 
-let parseOneFile (fname: string) : C.file =
+let parseOneFile (fname: string) : CType.file * Cabs.file =
   (* PARSE and convert to CIL *)
-  if !Cilutil.printStages then ignore (E.log "Parsing %s\n" fname);
-  let cil = F.parse fname () in
+  if !Cilutil.printStages then Format.print_string "printStages\n";(*ignore (E.log "Parsing %s\n" fname);*)
+	F.parse fname ()
+  (*let cil = F.parse fname () in
   
   if (not !Epicenter.doEpicenter) then (
     (* sm: remove unused temps to cut down on gcc warnings  *)
@@ -39,31 +47,32 @@ let parseOneFile (fname: string) : C.file =
     (* (trace "sm" (dprintf "removing unused temporaries\n")); *)
     (Rmtmps.removeUnusedTemps cil)
   );
-  cil
+	if true then (
+	(Rmtmps.removeUnusedTemps cil);)*)
 	
 let makeCFGFeature : C.featureDescr = 
   { C.fd_name = "makeCFG";
-    C.fd_enabled = Cilutil.makeCFG;
+    C.fd_enabled = ref true;(*Cilutil.makeCFG;*)
     C.fd_description = "make the program look more like a CFG" ;
     C.fd_extraopt = [];
     C.fd_doit = (fun f -> 
-      ignore (Partial.calls_end_basic_blocks f) ; 
-      ignore (Partial.globally_unique_vids f) ; 
+      (*ignore (Partial.calls_end_basic_blocks f) ; 
+      ignore (Partial.globally_unique_vids f) ; *)
       Cil.iterGlobals f (fun glob -> match glob with
-        Cil.GFun(fd,_) -> Cil.prepareCFG fd ;
-                      (* jc: blockinggraph depends on this "true" arg *)
-                      ignore (Cil.computeCFGInfo fd true)
+        CType.GFun(fd,_) -> Cfg.prepareCFG fd ;
+                      (* jc: blockinggraph depends on this "true" arg 
+                      ignore (Cil.computeCFGInfo fd true)*)
       | _ -> ()) 
     );
     C.fd_post_check = true;
-  } 
+  }
 	
 let features : C.featureDescr list = 
-  [ Epicenter.feature;
+  [ (*Epicenter.feature;
     Simplify.feature;
     Canonicalize.feature;
     Callgraph.feature;
-    (*Logwrites.feature;
+    Logwrites.feature;
     Heapify.feature1;
     Heapify.feature2;
     Oneret.feature;
@@ -76,15 +85,15 @@ let features : C.featureDescr list =
     Ptranal.feature;
     Liveness.feature;*)
   ] 
-  @ Feature_config.features 
+  (*@ Feature_config.features*)
 
 
-let rec processOneFile (cil: C.file) =
+let rec processOneFile (cil: CType.file) =
   begin
 		Printf.printf "--------开始处理的文件\n%s\n" cil.fileName;		
 		Printf.printf "cil.globinitcalled=%b\n" cil.globinitcalled;
 		(*Frontc.parse cil.fileName;
-		Cfg.computeFileCFG cil;*)
+		Cfg.computeFileCFG cil;
 		
 		Printf.printf "length=cil.globals=%d\n" (List.length cil.globals);
 		
@@ -188,11 +197,18 @@ let rec processOneFile (cil: C.file) =
 		List.iter (fun ele ->
 			Printf.printf "%s\n" ele.vname;
 			) fundec.sformals;
-		Printf.printf "%s\n" "++++fundec.sformals";
+		Printf.printf "%s\n" "++++fundec.sformals";*)
 		
+		(*let mem_functions = Value_parameters.MemFunctions.get () in
+	  if Value_parameters.MemExecAll.get ()
+	    || not (Datatype.String.Set.is_empty mem_functions)
+	  then begin
+	    Value_parameters.feedback "====== MEMOIZING FUNCTIONS ======";
+	    Ast.compute ();
+		end;*)
+		(*Ast.compute ();
+		Db.Inputs.expr ();*)
 		Ast.compute ();
-		Db.INOUT.get_internal ();
-		
 		(*Printf.printf "%s\n" "----CFG";		
 		List.iter (fun ele ->
 			let num = Cfg.cfgFun fundec in
@@ -202,18 +218,18 @@ let rec processOneFile (cil: C.file) =
 		
 		
 		
-    if !Cilutil.doCheck then begin
+    (*if !Cilutil.doCheck then begin
       ignore (E.log "First CIL check\n");
       if not (CK.checkFile [] cil) && !Cilutil.strictChecking then begin
         E.bug ("CIL's internal data structures are inconsistent "
                ^^"(see the warnings above).  This may be a bug "
                ^^"in CIL.\n")
       end
-    end;
+    end;*)
 
     (* Scan all the features configured from the Makefile and, if they are 
      * enabled then run them on the current file *)
-    List.iter 
+    (*List.iter 
       (fun fdesc -> 
         if ! (fdesc.C.fd_enabled) then begin
           if !E.verboseFlag then 
@@ -241,7 +257,7 @@ let rec processOneFile (cil: C.file) =
 	(C.dumpFile (!C.printerForMaincil) c.fchan c.fname) cil);
 
     if !E.hadErrors then
-      E.s (E.error "Error while processing file; see above for details.");
+      E.s (E.error "Error while processing file; see above for details.");*)
 
   end
 	
@@ -251,8 +267,8 @@ let theMain () =
   (* Processign of output file arguments *)
   let openFile (what: string) (takeit: outfile -> unit) (fl: string) = 
 		Format.print_string what;
-		if !E.verboseFlag then
-      ignore (Printf.printf "Setting %s to %s\n" what fl);
+		(*if !E.verboseFlag then
+      ignore (Printf.printf "Setting %s to %s\n" what fl);*)
     (
 			Format.print_string what;
 			try takeit { fname = fl;
@@ -266,13 +282,13 @@ let theMain () =
    * can easily add a command-line flag if someone sometimes
    * wants these suppressed *)
   
-	C.print_CIL_Input := true;
+	(*C.print_CIL_Input := true;*)
 
   (*********** COMMAND LINE ARGUMENTS *****************)
   (* Construct the arguments for the features configured from the Makefile *)
-  let blankLine = ("", Arg.Unit (fun _ -> ()), "") in
+  (*let blankLine = ("", Arg.Unit (fun _ -> ()), "") in
   let featureArgs = 
-    List.fold_right
+    List.fold_right 
       (fun fdesc acc ->
 	if !(fdesc.C.fd_enabled) then
           (* The feature is enabled by default *)
@@ -286,13 +302,12 @@ let theMain () =
           ("--do" ^ fdesc.C.fd_name, Arg.Set(fdesc.C.fd_enabled), 
            " Enable " ^ fdesc.C.fd_description) ::
           fdesc.C.fd_extraopt @ acc
-      )
-      features
+      ) features
       [blankLine]
   in
   let featureArgs = 
     ("", Arg.Unit (fun () -> ()), " \n\t\tCIL Features") :: featureArgs 
-  in
+  in*)
     
   let argDescr = Ciloptions.options @ 
         [ 
@@ -327,15 +342,7 @@ let theMain () =
 			) !Ciloptions.fileNames;
 		Format.print_string "--------要处理的源文件--------\n";
 		
-		(*let print_source_file_name (fname: string)=
-			Format.print_string fname;
-			Format.print_string "\n";
-			in
-		Format.print_string "--------要处理的源文件如下:\n";
-		List.map print_source_file_name !Ciloptions.fileNames;
-		Format.print_string "--------要处理的源文件--------\n";*)
-		
-    if !Cilutil.testcil <> "" then begin
+    (*if !Cilutil.testcil <> "" then begin
       Testcil.doit !Cilutil.testcil
     end else
       (* parse each of the files named on the command line, to CIL *)
@@ -368,12 +375,12 @@ let theMain () =
 			Format.print_string "--------合并结束\n";
 			
       if !E.hadErrors then
-        E.s (E.error "Cabs2cil had some errors");
+        E.s (E.error "Cabs2cil had some errors");*)
 
       (* process the CIL file (merged if necessary) *)
       processOneFile one
   end
-;;
+
 
 Format.print_string "before main\n";;
 theMain();;
