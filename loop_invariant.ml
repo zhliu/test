@@ -89,7 +89,7 @@ let rec processOneFile (cil: Cil_types.file) =
 		
 		
 		Printf.printf "%s\n" "----cil.globals";
-		
+		let loop_number = 0 in 
 		
 					(**let get_loc_str location=
 						let loc=Cil.d_loc Format.std_formatter location in
@@ -134,47 +134,16 @@ let rec processOneFile (cil: Cil_types.file) =
 					Printf.printf "fundec.name=%s\n" fundec.svar.vname;
 					
 					Cfg.cfgFun fundec;
+					Function_analysis.count_loop_number fundec loop_number;
 					Function_analysis.print_function_stmts fundec;
 					(*let num = Cfg.cfgFun fundec in
 					Printf.printf "\tCfg.cfgFun:num=%d\n" num;*)
 					let dotName = "/home/lzh/"^fundec.svar.vname^".dot" in
 					Cfg.printCfgFilename dotName fundec;
 					
-					
-						(*let print_instr instr=
-							let doc = Cil.d_instr Cil.defaultCilPrinter instr in
-							let instrS= Pretty.sprint 80 doc in
-							Printf.printf "\t\t%s\n" instrS;
-						in
+		
 						
-						let print_skind skind =
-							match skind with
-							| (Instr (instr)) ->
-								Format.print_string "\t\tInstr:=";
-								List.iter (fun ele ->
-								print_instr ele;
-								) instr;
-							| (Return (expr,location)) -> 
-								Printf.printf "\t\tReturn:location.file=%s\n" (get_loc_str location);
-							|	(Break (location)) -> 
-								Printf.printf "\t\tBreak:location.file=%s\n" (get_loc_str location);
-							| _ -> 
-								Printf.printf "\t\t%s\n" "I donnot konw.";
-							in
-							
-					List.iter (fun stmt ->
-						let doc = Cil.d_stmt () stmt in
-						let stmtS=Pretty.sprint 80 doc in
-						Printf.printf "\t\tsbody.bstmts:%s\n" stmtS;
-						)	fundec.sbody.bstmts;
-						
-					List.iter (fun stmt ->
-						let doc = Cil.d_stmt () stmt in
-						let stmtS=Pretty.sprint 80 doc in
-						Printf.printf "\t\tsbody.sallstmts:%s\n" stmtS;
-						)	fundec.sallstmts;
-						
-					Format.print_string "\n";
+					(*Format.print_string "\n";
 				| (GAsm (asm,location)) -> 
 					Printf.printf "GAsm:location.file=%s\n" location.file;
 				| (GPragma (attribute,location)) -> 
@@ -196,7 +165,9 @@ let rec processOneFile (cil: Cil_types.file) =
 			Printf.printf "%s\n" ele.vname;
 			) fundec.sformals;
 		Printf.printf "%s\n" "++++fundec.sformals";
-		(*let mem_functions = Loop_parameters.MemFunctions.get () in
+		
+		(*Function_analysis.visit_cilfile cil;
+		let mem_functions = Loop_parameters.MemFunctions.get () in
 	  if Loop_parameters.MemExecAll.get ()
 	    || not (Datatype.String.Set.is_empty mem_functions)
 	  then begin
@@ -218,3 +189,4 @@ let rec processOneFile (cil: Cil_types.file) =
 let theMain () =
 	Ast.compute ();
 	processOneFile (Ast.get ());
+	(*Function_analysis.print_proj_info;*)
