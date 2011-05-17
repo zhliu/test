@@ -1,4 +1,5 @@
 open Cil_types
+open Cmdline
 
 module F = Frontc
 module C = Cil
@@ -68,16 +69,18 @@ let rec processOneFile (cil: Cil_types.file) =
 		Printf.printf "--------开始处理的文件\n%s\n" cil.fileName;		
 		Printf.printf "cil.globinitcalled=%b\n" cil.globinitcalled;
 		(*Frontc.parse cil.fileName;
-		Cfg.computeFileCFG cil;
+		Cfg.computeFileCFG cil;*)
 		
 		Printf.printf "length=cil.globals=%d\n" (List.length cil.globals);
 		
-		let fundec = getGlobInit cil in
+		let fundec = Cil.getGlobInit cil in
 		Printf.printf "length=fundec.sallstmts=%d\n" (List.length fundec.sallstmts);
 		
+		Cfg.clearCFGinfo  fundec;
+		Cfg.clearFileCFG cil;
 		
-		prepareCFG fundec;
-		computeCFGInfo fundec true;
+		Cfg.prepareCFG fundec;
+		Cfg.computeCFGInfo fundec true;
 		Printf.printf "fundec.name=%s\n" fundec.svar.vname;
 		Printf.printf "cil.globinitcalled=%b\n" cil.globinitcalled;
 		Printf.printf "length=fundec.sallstmts=%d\n" (List.length fundec.sallstmts);
@@ -85,41 +88,59 @@ let rec processOneFile (cil: Cil_types.file) =
 		
 		
 		Printf.printf "%s\n" "----cil.globals";
+		
+		
+					(**let get_loc_str location=
+						let loc=Cil.d_loc Format.std_formatter location in
+						Pretty.sprint 80 doc;
+					in*)
 		List.iter (function g ->
 			match g with
 				|	(GText text) ->	
 					Printf.printf "location.file=%s\n" text;
-				| (GVarDecl (varinfo,location)) -> 
-					Printf.printf "GVarDecl:location.file=%s\n" location.file;
+				| (GVarDecl (funspec,varinfo,location)) -> 
+					(*Printf.printf "GVarDecl:location.file=%s\n" (get_loc_str location);*)
+					Cil.d_var Format.err_formatter varinfo;
+					Cil.d_loc Format.str_formatter location;
 					Printf.printf "GVarDecl:varinfo.vname=%s\n" varinfo.vname;
-					printType plainCilPrinter () varinfo.vtype;
-					Format.print_string "\n";
+					(*Cil.printType plainCilPrinter () varinfo.vtype;
+					Format.print_string "\n";*)
 				| (GType (typeinfo,location)) -> 
-					Printf.printf "GType:location.file=%s\n" location.file;
+					Printf.printf "GType:typeinfo.tname=%s\n" typeinfo.tname;
+					(*Printf.printf "GType:location.file=%s\n" (get_loc_str location);*)
 				| (GCompTag (compinfo,location)) -> 
-					Printf.printf "GCompTag:location.file=%s\n" location.file;
+					Printf.printf "GCompTag:compinfo.cname=%s\n" compinfo.cname;
+					(*Printf.printf "GCompTag:location.file=%s\n" (get_loc_str location);*)
 				| (GCompTagDecl (compinfo,location)) -> 
-					Printf.printf "GCompTagDecl:location.file=%s\n" location.file;
+					Printf.printf "GCompTagDecl:compinfo.cname=%s\n" compinfo.cname;
+					(*Printf.printf "GCompTagDecl:location.file=%s\n" (get_loc_str location);*)
 				| (GEnumTag (enuminfo,location)) -> 
-					Printf.printf "GEnumTag:location.file=%s\n" location.file;
+					Printf.printf "GEnumTagDecl:enuminfo.ename=%s\n" enuminfo.ename;
+					(*Printf.printf "GEnumTag:location.file=%s\n" (get_loc_str location);*)
 				| (GEnumTagDecl (enuminfo,location)) -> 
-					Printf.printf "GEnumTagDecl:location.file=%s\n" location.file;
-				| (GVarDecl (varinfo,location)) -> 
-					Printf.printf "GVarDecl:location.file=%s\n" location.file;
+					Printf.printf "GEnumTagDecl:enuminfo.ename=%s\n" enuminfo.ename;
+					(*Printf.printf "GEnumTagDecl:location.file=%s\n" (get_loc_str location);*)
+				| (GVarDecl (funspec,varinfo,location)) -> 
+					Printf.printf "GVarDecl:varinfo.vname=%s\n" varinfo.vname; 
+					(*Printf.printf "GVarDecl:location.file=%s\n" (get_loc_str location);*)
 				| (GVar (varinfo,initinfo,location)) -> 
-					Printf.printf "GVar:location.file=%s\n" location.file;
+					Printf.printf "GVar:varinfo.vname=%s\n" varinfo.vname;
+					(*Printf.printf "GVar:location.file=%s\n" (get_loc_str location);*)
 					Printf.printf "Gvar:varinfo.vname=%s\n" varinfo.vname;
 				| (GFun (fundec,location)) -> 
 					Format.print_string "GFun:\n";
-					Printf.printf "\tlocation.file=%s\n" location.file;
+					(*Printf.printf "\tlocation.file=%s\n" (get_loc_str location);*)
 					Printf.printf "\tfundec.name=%s\n" fundec.svar.vname;
-					let num = Cfg.cfgFun fundec in
-					Printf.printf "\tCfg.cfgFun:num=%d\n" num;
 					
-					Cfg.printCfgFilename "/home/lzh/a.dot" fundec;
+					Cfg.cfgFun fundec;
+					(*let num = Cfg.cfgFun fundec in
+					Printf.printf "\tCfg.cfgFun:num=%d\n" num;*)
+					let dotName = "/home/lzh/"^fundec.svar.vname^".dot" in
+					Cfg.printCfgFilename dotName fundec;
 					
-						let print_instr instr=
-							let doc = Cil.d_instr () instr in
+					
+						(*let print_instr instr=
+							let doc = Cil.d_instr Cil.defaultCilPrinter instr in
 							let instrS= Pretty.sprint 80 doc in
 							Printf.printf "\t\t%s\n" instrS;
 						in
@@ -132,9 +153,9 @@ let rec processOneFile (cil: Cil_types.file) =
 								print_instr ele;
 								) instr;
 							| (Return (expr,location)) -> 
-								Printf.printf "\t\tReturn:location.file=%s\n" location.file;
+								Printf.printf "\t\tReturn:location.file=%s\n" (get_loc_str location);
 							|	(Break (location)) -> 
-								Printf.printf "\t\tBreak:location.file=%s\n" location.file;
+								Printf.printf "\t\tBreak:location.file=%s\n" (get_loc_str location);
 							| _ -> 
 								Printf.printf "\t\t%s\n" "I donnot konw.";
 							in
@@ -155,7 +176,7 @@ let rec processOneFile (cil: Cil_types.file) =
 				| (GAsm (asm,location)) -> 
 					Printf.printf "GAsm:location.file=%s\n" location.file;
 				| (GPragma (attribute,location)) -> 
-					Printf.printf "GPragma:location.file=%s\n" location.file;
+					Printf.printf "GPragma:location.file=%s\n" location.file;*)
 				| _ -> Printf.printf "%s\n" "I donnot konw.";
 			) cil.globals;
 		Printf.printf "%s\n" "++++cil.globals";
@@ -172,8 +193,7 @@ let rec processOneFile (cil: Cil_types.file) =
 		List.iter (fun ele ->
 			Printf.printf "%s\n" ele.vname;
 			) fundec.sformals;
-		Printf.printf "%s\n" "++++fundec.sformals";*)
-		
+		Printf.printf "%s\n" "++++fundec.sformals";
 		(*let mem_functions = Loop_parameters.MemFunctions.get () in
 	  if Loop_parameters.MemExecAll.get ()
 	    || not (Datatype.String.Set.is_empty mem_functions)
@@ -194,7 +214,9 @@ let rec processOneFile (cil: Cil_types.file) =
   end
 	
 let theMain () =
-	let mem_functions = Loop_parameters.MemFunctions.get () in
+	Ast.compute ();
+	processOneFile (Ast.get ());
+	(*let mem_functions = Loop_parameters.MemFunctions.get () in
   if Loop_parameters.MemExecAll.get ()
     || not (Datatype.String.Set.is_empty mem_functions)
   then begin
@@ -216,7 +238,7 @@ let theMain () =
 	       Kernel_function.pretty_name kf
 	 end)
   end;
-  (*let usageMsg = "Usage: cilly [options] source-files" in
+  let usageMsg = "Usage: cilly [options] source-files" in
   (* Processign of output file arguments *)
   let openFile (what: string) (takeit: outfile -> unit) (fl: string) = 
 		Format.print_string what;

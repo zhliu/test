@@ -20,21 +20,20 @@
 (*                                                                        *)
 (**************************************************************************)
 
-include Plugin.Register
+(*include Plugin.Register
     (struct
-       let name = "value analysis"
-       let shortname = "value"
-       let module_name = "Value"
-       let help =
- "automatically computes variation domains for the variables of the program"
+			let name = "Loop Invariant"
+       let shortname = "loopInvariant"
+       let help = "my 'Loop Invariant' plugin"
+       let module_name = "LoopInvariant"
     end)
 
 module ForceValues =
   Action
     (struct
-       let option_name = "-val"
-       let help = "compute values"
-       let kind = `Tuning
+       let option_name = "-loop-invariant"
+       let help = "my loop invariant plugin"
+       let kind = `Correctness
      end)
 
 module MemFunctions =
@@ -63,7 +62,7 @@ let () =
 
 module NoResultsFunctions =
   StringSet
-    (struct
+    (struct -> 
        let option_name = "-no-results-function"
        let arg_name = "f"
        let help = "do not record the values obtained for the statements of function f"
@@ -347,7 +346,7 @@ let () =
       SlevelFunction.self;
       Subdivide_float_in_expr.self;
     ]
-
+*)
 (*
 Local Variables:
 compile-command: "make -C ../.."

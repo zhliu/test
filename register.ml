@@ -11,7 +11,7 @@ module Self =
   Plugin.Register
     (struct
        let name = "Loop Invariant"
-       let shortname = "loopInv"
+       let shortname = "loopInvariant"
        let help = "my 'Loop Invariant' plugin"
      end)
 
