@@ -3,7 +3,7 @@
     command line option "-loop-invariant".
     When this option is set it .... *)
 
-open GetCfg
+open Loop_invariant
 
 (** Register the new plug-in "Loop Invariant" and provide access to some plug-in
     dedicated features. *)
@@ -24,9 +24,8 @@ module Enabled =
        let kind = `Correctness
      end)
 
-let print () = 
-	Self.result "my loop invariant plugin no theMain?\n";
-	GetCfg.theMain ()
+let compute_loop_invariant () = 
+	Loop_invariant.theMain ()
 
 let print =
   Dynamic.register
@@ -34,10 +33,10 @@ let print =
     "run"
     ~journalize:true
     (Datatype.func Datatype.unit Datatype.unit)
-    print
+    compute_loop_invariant
 
-let run () =  if Enabled.get () then print ()
+let main () =  if Enabled.get () then compute_loop_invariant ()
 
 (** Register the function [run] as a main entry point. *)
-let () = Db.Main.extend run
+let () = Db.Main.extend main
 (*let () = Db.LoopInvariant.run <- run*)
