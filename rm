@@ -3,3 +3,4 @@ rm -fr *.cmo
 rm -fr *.annot
 rm -fr *.cmx
 rm -fr *.o
+rm -fr *_DEP

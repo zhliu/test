@@ -89,7 +89,6 @@ let rec processOneFile (cil: Cil_types.file) =
 		
 		
 		Printf.printf "%s\n" "----cil.globals";
-		let loop_number = 0 in 
 		
 					(**let get_loc_str location=
 						let loc=Cil.d_loc Format.std_formatter location in
@@ -130,11 +129,25 @@ let rec processOneFile (cil: Cil_types.file) =
 					Printf.printf "Gvar:varinfo.vname=%s\n" varinfo.vname;
 				| (GFun (fundec,location)) -> 
 					Printf.printf "%s\n" "GFun:";
+					Printf.printf "%s" "函数位置:";
+					Cil.d_loc Format.std_formatter location;
+					Printf.printf "%s" "**\n";
 					(*Printf.printf "\tlocation.file=%s\n" (get_loc_str location);*)
 					Printf.printf "fundec.name=%s\n" fundec.svar.vname;
 					
+					Printf.printf "%s\n" "----fundec.slocals";
+					List.iter (fun varinfo ->
+						Printf.printf "%s\n" varinfo.vname;
+						) fundec.slocals;
+					Printf.printf "%s\n" "++++fundec.slocals";
+					Printf.printf "%s\n" "----fundec.sformals";
+					List.iter (fun ele ->
+						Printf.printf "%s\n" ele.vname;
+						) fundec.sformals;
+					Printf.printf "%s\n" "++++fundec.sformals";
+					
 					Cfg.cfgFun fundec;
-					Function_analysis.count_loop_number fundec loop_number;
+					Function_analysis.count_loop_number fundec;
 					Function_analysis.print_function_stmts fundec;
 					(*let num = Cfg.cfgFun fundec in
 					Printf.printf "\tCfg.cfgFun:num=%d\n" num;*)
@@ -150,22 +163,12 @@ let rec processOneFile (cil: Cil_types.file) =
 					Printf.printf "GPragma:location.file=%s\n" location.file;*)
 				| _ -> Printf.printf "%s\n" "I donnot konw.";
 			) cil.globals;
+		Printf.printf "程序中的循环个数=%n\n" !Function_analysis.loop_number;
 		Printf.printf "%s\n" "++++cil.globals";
 		
 		
-		Printf.printf "fundec.svar.vname=%s\n" fundec.svar.vname;
-		Printf.printf "%s\n" "----fundec.slocals";
-		List.iter (fun varinfo ->
-			Printf.printf "%s\n" varinfo.vname;
-			) fundec.slocals;
-		Printf.printf "%s\n" "++++fundec.slocals";
-		
-		Printf.printf "%s\n" "----fundec.sformals";
-		List.iter (fun ele ->
-			Printf.printf "%s\n" ele.vname;
-			) fundec.sformals;
-		Printf.printf "%s\n" "++++fundec.sformals";
-		
+		let graph = Callgraph.computeGraph cil in
+		Callgraph.printGraph Pervasives.stdout graph;
 		(*Function_analysis.visit_cilfile cil;
 		let mem_functions = Loop_parameters.MemFunctions.get () in
 	  if Loop_parameters.MemExecAll.get ()

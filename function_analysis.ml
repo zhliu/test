@@ -2,32 +2,42 @@ open Cil
 open Cil_types
 open Visitor
 open Project
+open Callgraph
 
-	
+
 type sequence = stmt * lval list * lval list * lval list * stmt ref list
 
+let loop_number = ref 0
+
 (**统计函数中有多少个循环*)
-let count_loop_number fundec loop_number = 
+let count_loop_number (funDec:Cil_types.fundec) = 
 	List.iter (fun stmt ->
 		match stmt.skind with
 			| Loop(code_annotation , block , location , stmt1 , stmt2) -> 
-				loop_number <- loop_number + 1;
-			| _ -> loop_number;
-		) fundec.sallstmts;
-		loop_number
+				loop_number := !loop_number + 1;
+			| _ -> loop_number := !loop_number;
+		) funDec.sallstmts;
+		!loop_number
 		
+let d_stmt_option stmt = 
+		match stmt with
+			| None -> Printf.printf "%s" "None"
+			| Some s ->Cil.d_stmt Format.std_formatter s
+			| _ -> Printf.printf "%s" "i donnot konw"
+
 (**语句类型*)
 let print_function_stmt_kind stmt = 
-	let loop_visitor = new Visitor.frama_c_inplace in
-	(*Format.print_string "begin visit stmt\n";
+	(*let loop_visitor = new Visitor.frama_c_inplace in
+	Format.print_string "begin visit stmt\n";
 	Visitor.visitFramacStmt loop_visitor stmt;
 	Format.print_string "end visit stmt\n";*)
 	match stmt.skind with
 		| ( Instr ( instr ) ) ->
 			Format.print_string "instr\n";
-			(*Visitor.visitFramacInstr loop_visitor instr;*)
-			Format.print_string "\n";
+			(*Visitor.visitFramacInstr loop_visitor instr;
+			Format.print_string "\n";*)
 		| ( Return ( exp , location ) )->
+			Cil.d_loc Format.std_formatter location;
 			Format.print_string "return\n"
 		| ( Goto ( stmt , location) ) ->
 			Format.print_string "goto\n"
@@ -40,11 +50,22 @@ let print_function_stmt_kind stmt =
 		| ( Switch ( expr , block , stmtl , location ) ) ->
 			Format.print_string "switch\n"
 		| ( Loop ( code_annotation , block , location , stmt1 , stmt2 ) ) ->
-			Format.print_string "loop\n"
+			Format.print_string "loop\n";
+			Printf.printf "%s" "循环位置:";
+			Cil.d_loc Format.std_formatter location;
+			List.iter (fun codeAnnot ->
+			Cil.d_code_annotation Format.std_formatter codeAnnot
+			) code_annotation;
+			Cil.d_block Format.std_formatter block;
+			Printf.printf "stmt1:%s" "\n";
+			d_stmt_option stmt1;
+			Printf.printf "stmt2:%s" "\n";
+			d_stmt_option stmt2;
+			Printf.printf "%s" "**\n";
 		| ( Block ( block ) ) ->
 			Format.print_string "block\n";
-			(*Visitor.visitFramacBlock loop_visitor block;*)
-			Format.print_string "\n";
+			(*Visitor.visitFramacBlock loop_visitor block;
+			Format.print_string "\n";*)
 		| ( UnspecifiedSequence (quence : sequence list) ) ->
 			Format.print_string "unspecifiedSequence\n"
 		| ( TryFinally ( block1 , block2 , location ) ) ->
@@ -61,9 +82,9 @@ let print_function_stmts fundec =
 		(*Format.print_bool stmt.ghost;
 		Format.print_int stmt.sid;
 		Format.print_string "\n";*)
-		Printf.printf "%s\n" "语句类型为:";
+		Printf.printf "%s" "语句类型为:";
 		print_function_stmt_kind stmt;
-		Printf.printf "%s\n" "语句的内容为:";
+		Printf.printf "%s" "语句的内容为:";
 		Cil.d_stmt Format.std_formatter stmt;
 		Format.print_string "\n";
 		) fundec.sallstmts
