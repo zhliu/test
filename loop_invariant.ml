@@ -169,6 +169,11 @@ let rec processOneFile (cil: Cil_types.file) =
 		
 		let graph = Callgraph.computeGraph cil in
 		Callgraph.printGraph Pervasives.stdout graph;
+		
+		let out_file = open_out "/home/lzh/result.c" in
+		Cil.dumpFile Cil.defaultCilPrinter out_file "/home/lzh/new.c" cil;
+		flush out_file;
+		close_out out_file;
 		(*Function_analysis.visit_cilfile cil;
 		let mem_functions = Loop_parameters.MemFunctions.get () in
 	  if Loop_parameters.MemExecAll.get ()

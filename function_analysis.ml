@@ -4,7 +4,6 @@ open Visitor
 open Project
 open Callgraph
 
-
 type sequence = stmt * lval list * lval list * lval list * stmt ref list
 
 let loop_number = ref 0
@@ -50,6 +49,25 @@ let print_function_stmt_kind stmt =
 		| ( Switch ( expr , block , stmtl , location ) ) ->
 			Format.print_string "switch\n"
 		| ( Loop ( code_annotation , block , location , stmt1 , stmt2 ) ) ->
+			(*Printf.printf "new_loc.loc_plnum=%d\n" (fst location).Lexing.pos_lnum;
+			let new_loc = location in
+			let lnum = (fst location).Lexing.pos_lnum in
+			(fst new_loc).Lexing.pos_lnum := !lnum+1;
+			let exp = Cil.mkString new_loc "mkString" in*)
+			let (p1,p2) = location in
+			let mkPosition location : Lexing.position (*pos_fname pos_lnum pos_bol pos_cnum*) =
+				{Lexing.pos_fname=(location).Lexing.pos_fname;
+				pos_lnum=(location).Lexing.pos_lnum+2;
+				pos_bol=(location).Lexing.pos_bol;
+				pos_cnum=(location).Lexing.pos_cnum;} in
+				
+			let new_loc = mkPosition (fst location) in
+			
+			Printf.printf "new_loc.loc_lnum=%s\n" (p1).Lexing.pos_fname;
+			(p1).Lexing.pos_lnum=(p1).Lexing.pos_lnum+1;
+			Printf.printf "new_loc.loc_lnum=%d\n" (new_loc).Lexing.pos_lnum;
+			Cil.mkString (new_loc,p2) "mkString op";
+			
 			Format.print_string "loop\n";
 			Printf.printf "%s" "循环位置:";
 			Cil.d_loc Format.std_formatter location;
