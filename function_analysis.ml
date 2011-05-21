@@ -54,6 +54,7 @@ let print_function_stmt_kind stmt =
 			let lnum = (fst location).Lexing.pos_lnum in
 			(fst new_loc).Lexing.pos_lnum := !lnum+1;
 			let exp = Cil.mkString new_loc "mkString" in*)
+			Format.print_string "loop\n";
 			let (p1,p2) = location in
 			let mkPosition location : Lexing.position (*pos_fname pos_lnum pos_bol pos_cnum*) =
 				{Lexing.pos_fname=(location).Lexing.pos_fname;
@@ -63,23 +64,33 @@ let print_function_stmt_kind stmt =
 				
 			let new_loc = mkPosition (fst location) in
 			
-			Printf.printf "new_loc.loc_lnum=%s\n" (p1).Lexing.pos_fname;
+			Printf.printf "new_loc.pos_fname=%s\n" (p1).Lexing.pos_fname;
 			(p1).Lexing.pos_lnum=(p1).Lexing.pos_lnum+1;
 			Printf.printf "new_loc.loc_lnum=%d\n" (new_loc).Lexing.pos_lnum;
-			Cil.mkString (new_loc,p2) "mkString op";
+			let guard = Cil.mkString (new_loc,p2) "mkString op" in
 			
-			Format.print_string "loop\n";
+			let stmt = mkStmt ~ghost:false ~valid_sid:true stmt.skind in
+			let stmtl=[stmt;] in
+			let mywhilestmt = Cil.mkWhile guard stmtl in
+			Printf.printf "%s\n" "我的语句begin";
+			Cil.d_stmt Format.std_formatter stmt;
+			List.iter(fun sm -> 
+				Cil.d_stmt Format.std_formatter sm;
+				) mywhilestmt;
+			Printf.printf "\n%s\n" "我的语句end";
+			
+			(*Format.print_string "loop\n";
 			Printf.printf "%s" "循环位置:";
 			Cil.d_loc Format.std_formatter location;
 			List.iter (fun codeAnnot ->
-			Cil.d_code_annotation Format.std_formatter codeAnnot
+			Cil.d_code_annotation Format.std_formatter codeAnnot;
 			) code_annotation;
 			Cil.d_block Format.std_formatter block;
 			Printf.printf "stmt1:%s" "\n";
 			d_stmt_option stmt1;
 			Printf.printf "stmt2:%s" "\n";
 			d_stmt_option stmt2;
-			Printf.printf "%s" "**\n";
+			Printf.printf "%s" "**\n";*)
 		| ( Block ( block ) ) ->
 			Format.print_string "block\n";
 			(*Visitor.visitFramacBlock loop_visitor block;

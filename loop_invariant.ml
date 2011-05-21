@@ -1,6 +1,10 @@
 open Cil_types
 open Cmdline
 open Function_analysis
+open Db
+open Db_types
+open Ast_printer
+open Globals
 
 module F = Frontc
 module C = Cil
@@ -167,9 +171,35 @@ let rec processOneFile (cil: Cil_types.file) =
 		Printf.printf "%s\n" "++++cil.globals";
 		
 		
-		let graph = Callgraph.computeGraph cil in
+		(*let graph = Callgraph.computeGraph cil in
 		Callgraph.printGraph Pervasives.stdout graph;
 		
+		let ab = Project.create "ab" in
+		let abc = !Db.Slicing.Project.mk_project "abc" in
+		let kfunciont = !Db.Slicing.Slice.get_function (Project.current ()) in*)
+		
+		(**访问所有函数,得到kernel_function等*)
+		List.iter(fun s ->
+			Printf.printf "----%s\n" s;
+			List.iter(fun kfun ->
+				match kfun.fundec with
+					| Definition (fundec , location) ->
+						Printf.printf "%s\n" "Definition";
+						Printf.printf "%s\n" fundec.svar.vname;
+						Cil.d_loc Format.std_formatter location;
+						Printf.printf "\n";
+					| Declaration (funspec , varinfo , varinfolo , location) ->
+						Printf.printf "%s\n" "Declaration";
+						Cil.d_funspec Format.std_formatter funspec;
+						Printf.printf "%s\n" varinfo.vname;
+						Cil.d_loc Format.std_formatter location;
+						Printf.printf "\n";
+					| _ -> Printf.printf "%s\n" "i donnot konw";
+						
+				) (Globals.FileIndex.get_functions s);
+			Printf.printf "++++%s\n" s;
+			) (Globals.FileIndex.get_files ());
+			
 		let out_file = open_out "/home/lzh/result.c" in
 		Cil.dumpFile Cil.defaultCilPrinter out_file "/home/lzh/new.c" cil;
 		flush out_file;
