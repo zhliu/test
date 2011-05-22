@@ -73,23 +73,24 @@ let rec processOneFile (cil: Cil_types.file) =
   begin
 		Printf.printf "--------开始处理的文件\n%s\n" cil.fileName;		
 		Printf.printf "cil.globinitcalled=%b\n" cil.globinitcalled;
-		(*Frontc.parse cil.fileName;
-		Cfg.computeFileCFG cil;*)
 		
 		Printf.printf "length=cil.globals=%d\n" (List.length cil.globals);
 		
-		let fundec = Cil.getGlobInit cil in
-		Printf.printf "length=fundec.sallstmts=%d\n" (List.length fundec.sallstmts);
+		(**加上此句后会生成一个全局初始函数，挺烦的*)
+		(*let fundec = Cil.getGlobInit cil in*)
+		(*Printf.printf "length=fundec.sallstmts=%d\n" (List.length fundec.sallstmts);
 		
-		Cfg.clearCFGinfo  fundec;
-		Cfg.clearFileCFG cil;
+		Cfg.clearCFGinfo  fundec;*)
+		Cfg.clearFileCFG ~clear_id:true cil;
+		Cfg.computeFileCFG cil;
 		
-		Cfg.prepareCFG fundec;
-		Cfg.computeCFGInfo fundec true;
+		(*Cfg.prepareCFG fundec;
+		Cfg.computeCFGInfo fundec true;*)
+		(**
 		Printf.printf "before cil.globals fundec.name=%s\n" fundec.svar.vname;
 		Printf.printf "cil.globinitcalled=%b\n" cil.globinitcalled;
 		Printf.printf "length=fundec.sallstmts=%d\n" (List.length fundec.sallstmts);
-		Printf.printf "fundec.smaxid=%d\n" fundec.smaxid;
+		Printf.printf "fundec.smaxid=%d\n" fundec.smaxid;*)
 		
 		
 		Printf.printf "%s\n" "----cil.globals";
@@ -98,6 +99,9 @@ let rec processOneFile (cil: Cil_types.file) =
 						let loc=Cil.d_loc Format.std_formatter location in
 						Pretty.sprint 80 doc;
 					in*)
+		
+		(*!Db.Value.compute ();*)
+		let visitor = new File.check_file cil.fileName in
 		List.iter (function g ->
 			match g with
 				|	(GText text) ->	
@@ -150,9 +154,10 @@ let rec processOneFile (cil: Cil_types.file) =
 						) fundec.sformals;
 					Printf.printf "%s\n" "++++fundec.sformals";
 					
+					Cfg.clearCFGinfo ~clear_id:true fundec;
 					Cfg.cfgFun fundec;
 					Function_analysis.count_loop_number fundec;
-					Function_analysis.print_function_stmts fundec;
+					Function_analysis.print_function_stmts fundec visitor;
 					(*let num = Cfg.cfgFun fundec in
 					Printf.printf "\tCfg.cfgFun:num=%d\n" num;*)
 					let dotName = "/home/lzh/"^fundec.svar.vname^".dot" in
@@ -170,16 +175,31 @@ let rec processOneFile (cil: Cil_types.file) =
 		Printf.printf "程序中的循环个数=%n\n" !Function_analysis.loop_number;
 		Printf.printf "%s\n" "++++cil.globals";
 		
-		
+		(**调用关系图*)
 		(*let graph = Callgraph.computeGraph cil in
-		Callgraph.printGraph Pervasives.stdout graph;
+		Callgraph.printGraph Pervasives.stdout graph;*)
 		
-		let ab = Project.create "ab" in
-		let abc = !Db.Slicing.Project.mk_project "abc" in
-		let kfunciont = !Db.Slicing.Slice.get_function (Project.current ()) in*)
 		
+		(**Slicing*)
+		(*let slicPro = !Db.Slicing.Project.mk_project "test_slice" in*)
+		(*let slicPro = !Db.Slicing.Slice.create (Project.current ())  kfun in
+		let kfuncion = !Db.Slicing.Slice.get_function (Project.current ()) in
+		match kfuncion.fundec with
+					| Definition (fundec , location) ->
+						Printf.printf "%s\n" "Definition";
+						Printf.printf "%s\n" fundec.svar.vname;
+						Cil.d_loc Format.std_formatter location;
+						Printf.printf "\n";
+					| Declaration (funspec , varinfo , varinfolo , location) ->
+						Printf.printf "%s\n" "Declaration";
+						Cil.d_funspec Format.std_formatter funspec;
+						Printf.printf "%s\n" varinfo.vname;
+						Cil.d_loc Format.std_formatter location;
+						Printf.printf "\n";
+					| _ -> Printf.printf "%s\n" "i donnot konw";*)
+						
 		(**访问所有函数,得到kernel_function等*)
-		List.iter(fun s ->
+		(*List.iter(fun s ->
 			Printf.printf "----%s\n" s;
 			List.iter(fun kfun ->
 				match kfun.fundec with
@@ -198,8 +218,18 @@ let rec processOneFile (cil: Cil_types.file) =
 						
 				) (Globals.FileIndex.get_functions s);
 			Printf.printf "++++%s\n" s;
-			) (Globals.FileIndex.get_files ());
-			
+			) (Globals.FileIndex.get_files ());*)
+		
+		(**value分析*)
+		(*let state= Db.Value.globals_state () in
+		Printf.printf "Db.Value.is_reachable=%b\n" (Db.Value.is_reachable state);
+		let visitor = new File.check_file cil.fileName in
+		Db.Value.access visitor#current_kinstr lval;
+		Printf.printf "%s\n" "开始visitFramacFile";
+		Visitor.visitFramacFile visitor cil;
+		Visitor.visitFramacFunction visitor fundec;
+		Printf.printf "%s\n" "结束visitFramacFile";*)
+		
 		let out_file = open_out "/home/lzh/result.c" in
 		Cil.dumpFile Cil.defaultCilPrinter out_file "/home/lzh/new.c" cil;
 		flush out_file;
@@ -225,6 +255,17 @@ let rec processOneFile (cil: Cil_types.file) =
   end
 	
 let theMain () =
-	Ast.compute ();
+	(*Ast.compute ();*)
+	Globals.Functions.iter
+      (fun kf ->
+				 let name = Kernel_function.get_name kf in
+				Printf.printf "name=%s\n" name;
+				 if Kernel_function.is_definition kf
+				 then begin
+				     Kernel_function.pretty_name Format.std_formatter kf;
+				 end
+	);
+	Ast.get ();
+	Printf.printf "%s\n" "over";
 	processOneFile (Ast.get ());
 	(*Function_analysis.print_proj_info;*)

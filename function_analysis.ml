@@ -25,7 +25,7 @@ let d_stmt_option stmt =
 			| _ -> Printf.printf "%s" "i donnot konw"
 
 (**语句类型*)
-let print_function_stmt_kind stmt = 
+let print_function_stmt_kind stmt visitor= 
 	(*let loop_visitor = new Visitor.frama_c_inplace in
 	Format.print_string "begin visit stmt\n";
 	Visitor.visitFramacStmt loop_visitor stmt;
@@ -45,7 +45,21 @@ let print_function_stmt_kind stmt =
 		| ( Continue ( location ) ) ->
 			Format.print_string "continue\n"
 		| ( If ( expr , block1 , block2 , location ) ) ->
-			Format.print_string "if\n"
+			Format.print_string "if\n";
+			(match expr.enode with
+				| Lval (lval) ->
+					(
+						match lval with
+							| (Var (varinfo) , _) ->
+								Printf.printf "%s\n" varinfo.vname;
+							| (Mem (mem), _) ->
+								Printf.printf "%s\n" "mem";
+						);
+					let value = !Db.Value.access visitor#current_kinstr lval in
+					Db.Value.pretty Format.std_formatter value;
+					Printf.printf "%s\n" "Lval";
+				| _ ->
+					Printf.printf "%s\n" "i donnot konw";);
 		| ( Switch ( expr , block , stmtl , location ) ) ->
 			Format.print_string "switch\n"
 		| ( Loop ( code_annotation , block , location , stmt1 , stmt2 ) ) ->
@@ -106,13 +120,13 @@ let print_function_stmt_kind stmt =
 			
 			
 (**打印所有语句*)
-let print_function_stmts fundec = 
+let print_function_stmts fundec visitor= 
 	List.iter (fun stmt ->
 		(*Format.print_bool stmt.ghost;
 		Format.print_int stmt.sid;
 		Format.print_string "\n";*)
 		Printf.printf "%s" "语句类型为:";
-		print_function_stmt_kind stmt;
+		print_function_stmt_kind stmt visitor;
 		Printf.printf "%s" "语句的内容为:";
 		Cil.d_stmt Format.std_formatter stmt;
 		Format.print_string "\n";
