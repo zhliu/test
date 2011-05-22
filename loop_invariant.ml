@@ -81,7 +81,8 @@ let rec processOneFile (cil: Cil_types.file) =
 		(*Printf.printf "length=fundec.sallstmts=%d\n" (List.length fundec.sallstmts);
 		
 		Cfg.clearCFGinfo  fundec;*)
-		Cfg.clearFileCFG ~clear_id:true cil;
+		(**设为true代码会变成dead，不太明白,丢失了一些结构？这里设为false*)
+		Cfg.clearFileCFG ~clear_id:false cil;
 		Cfg.computeFileCFG cil;
 		
 		(*Cfg.prepareCFG fundec;
@@ -154,7 +155,7 @@ let rec processOneFile (cil: Cil_types.file) =
 						) fundec.sformals;
 					Printf.printf "%s\n" "++++fundec.sformals";
 					
-					Cfg.clearCFGinfo ~clear_id:true fundec;
+					Cfg.clearCFGinfo ~clear_id:false fundec;
 					Cfg.cfgFun fundec;
 					Function_analysis.count_loop_number fundec;
 					Function_analysis.print_function_stmts fundec visitor;
@@ -176,8 +177,8 @@ let rec processOneFile (cil: Cil_types.file) =
 		Printf.printf "%s\n" "++++cil.globals";
 		
 		(**调用关系图*)
-		(*let graph = Callgraph.computeGraph cil in
-		Callgraph.printGraph Pervasives.stdout graph;*)
+		let graph = Callgraph.computeGraph cil in
+		Callgraph.printGraph Pervasives.stdout graph;
 		
 		
 		(**Slicing*)
