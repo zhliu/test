@@ -163,8 +163,9 @@ let rec processOneFile (cil: Cil_types.file) =
 					Printf.printf "\tCfg.cfgFun:num=%d\n" num;*)
 					let dotName = "/home/lzh/"^fundec.svar.vname^".dot" in
 					Cfg.printCfgFilename dotName fundec;
-					
-		
+					let cmdstr = "dot /home/lzh/"^fundec.svar.vname^".dot -Tpng -o /home/lzh/"^fundec.svar.vname^".png" in
+					Sys.command cmdstr;
+					Printf.printf "%s\n" "";
 						
 					(*Format.print_string "\n";
 				| (GAsm (asm,location)) -> 
@@ -173,6 +174,28 @@ let rec processOneFile (cil: Cil_types.file) =
 					Printf.printf "GPragma:location.file=%s\n" location.file;*)
 				| _ -> Printf.printf "%s\n" "I donnot konw.";
 			) cil.globals;
+			
+			(*let mainname = ref "main" in
+			let theFile : global list ref = ref [] in
+			List.iter 
+        begin
+          fun g ->
+            (match g with
+              GFun(m, lm) when m.svar.vname = !mainname ->
+                (* Prepend a prototype *)
+                theFile := GVarDecl (gi.svar, lm) :: !theFile;
+                m.sbody.bstmts <- 
+                   compactStmts (mkStmt (Instr [Call(None, 
+                                                     Lval(var gi.svar), 
+                                                     [], locUnknown)]) 
+                                 :: m.sbody.bstmts);
+                file.globinitcalled <- true;
+                if !E.verboseFlag then
+                  ignore (E.log "Inserted the globinit\n")
+            | _ -> ());
+            theFile := g :: !theFile (* Now put the global back *)
+        end
+        cil.globals;*)
 		Printf.printf "程序中的循环个数=%n\n" !Function_analysis.loop_number;
 		Printf.printf "%s\n" "++++cil.globals";
 		

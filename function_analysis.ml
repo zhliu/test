@@ -7,7 +7,9 @@ open Callgraph
 type sequence = stmt * lval list * lval list * lval list * stmt ref list
 
 let loop_number = ref 0
-
+(*
+let locUnknown = ({Lexing.position.pos_fname="";},{Lexing.position.pos_fname="";})
+	*)		
 (**统计函数中有多少个循环*)
 let count_loop_number (funDec:Cil_types.fundec) = 
 	List.iter (fun stmt ->
@@ -69,6 +71,14 @@ let print_function_stmt_kind stmt visitor=
 			(fst new_loc).Lexing.pos_lnum := !lnum+1;
 			let exp = Cil.mkString new_loc "mkString" in*)
 			Format.print_string "loop\n";
+			Printf.printf "%s\n" "----code_annotation";
+			List.iter(fun anno ->
+				Cil.d_code_annotation Format.std_formatter anno;
+				) code_annotation;
+			Printf.printf "%s\n" "++++code_annotation";
+			Printf.printf "%s\n" "----block";
+			Cil.d_block Format.std_formatter block;
+			Printf.printf "%s\n" "++++block";
 			let (p1,p2) = location in
 			let mkPosition location : Lexing.position (*pos_fname pos_lnum pos_bol pos_cnum*) =
 				{Lexing.pos_fname=(location).Lexing.pos_fname;
@@ -83,11 +93,16 @@ let print_function_stmt_kind stmt visitor=
 			Printf.printf "new_loc.loc_lnum=%d\n" (new_loc).Lexing.pos_lnum;
 			let guard = Cil.mkString (new_loc,p2) "mkString op" in
 			
-			let stmt = mkStmt ~ghost:false ~valid_sid:true stmt.skind in
-			let stmtl=[stmt;] in
+			let mystmt = mkStmt ~ghost:false ~valid_sid:true (Break (new_loc,p2)) in
+			let myifstmt=mkStmt ~ghost:false ~valid_sid:false (If (guard,block,block,(new_loc,p2))) in
+			(**停不了了*)
+			
+			Printf.printf "%s\n" "mystmt begin";
+			Cil.d_stmt Format.std_formatter myifstmt;
+			Printf.printf "\n%s\n" "mystmt end";
+			let stmtl=[mystmt;] in
 			let mywhilestmt = Cil.mkWhile guard stmtl in
 			Printf.printf "%s\n" "我的语句begin";
-			Cil.d_stmt Format.std_formatter stmt;
 			List.iter(fun sm -> 
 				Cil.d_stmt Format.std_formatter sm;
 				) mywhilestmt;
