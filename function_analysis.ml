@@ -3,6 +3,8 @@ open Cil_types
 open Visitor
 open Project
 open Callgraph
+open Db
+open Ast_printer
 
 type sequence = stmt * lval list * lval list * lval list * stmt ref list
 
@@ -25,6 +27,50 @@ let d_stmt_option stmt =
 			| None -> Printf.printf "%s" "None"
 			| Some s ->Cil.d_stmt Format.std_formatter s
 			| _ -> Printf.printf "%s" "i donnot konw"
+
+let p_stmt_succs stmt =
+	match stmt with
+		| None -> Printf.printf "\n"
+		| Some s -> List.iter(fun succe ->
+			Cil.d_stmt Format.std_formatter succe;
+			)s.succs;
+			Printf.printf "\n"
+		| _ -> Printf.printf "\s"
+
+let p_stmt_preds stmt =
+	match stmt with
+		| None -> Printf.printf "\n"
+		| Some s -> List.iter(fun succe ->
+			Cil.d_stmt Format.std_formatter succe;
+			)s.preds;
+			Printf.printf "\n"
+		| _ -> Printf.printf "\s"
+
+let p_stmt_value kinstr visitor =
+	match kinstr with
+		| Kstmt (stmt) -> 
+			(match stmt.skind with
+				| Instr (instr) ->
+					(match instr with
+						| Set(lval,exp,location) ->
+							let lval2 = visitFramacLval visitor lval in
+							!Ast_printer.d_lval Format.std_formatter lval2;
+							let v1 = !Db.Value.access (Kstmt stmt) lval in
+							let v2 = !Db.Value.access_after kinstr lval in
+							Db.Value.pretty Format.std_formatter v1;
+							Db.Value.pretty Format.std_formatter v2
+						| _ ->
+							Printf.printf "not Set\n"
+					)
+				| _ ->
+					Printf.printf "not Instr\n"
+			)			
+		| Kglobal ->
+			Printf.printf "Kglobal\n"
+			
+let p_visitor visitor = 
+	let kinstr=visitor#current_kinstr in
+	p_stmt_value kinstr visitor
 
 (**语句类型*)
 let print_function_stmt_kind stmt visitor= 
@@ -140,19 +186,197 @@ let print_function_stmts fundec visitor=
 		(*Format.print_bool stmt.ghost;
 		Format.print_int stmt.sid;
 		Format.print_string "\n";*)
-		Printf.printf "%s" "语句类型为:";
+		(*Printf.printf "%s" "语句类型为:";
 		print_function_stmt_kind stmt visitor;
 		Printf.printf "%s" "语句的内容为:";
 		Cil.d_stmt Format.std_formatter stmt;
 		Format.print_string "\n";
+		visitor#vstmt stmt; DoChildren;*)
+		(*let s2 = Visitor.visitFramacStmt visitor stmt in
+		visitor#push_stmt stmt;*)
+		p_visitor visitor;
+		(*visitor#pop_stmt stmt;*)
+		Printf.printf "\n";
 		) fundec.sallstmts
-
-
+let rec print_block block = 
+	List.iter(fun stmt ->
+		Printf.printf "--------stmt\n";
+		Cil.d_stmt Format.std_formatter stmt;
+		Printf.printf "\n";
+		(match stmt.skind with
+				| Instr (instr) ->
+					(match instr with
+						| Set(lval,exp,location) ->
+							(*let lval2 = visitFramacLval visitor lval in
+							!Ast_printer.d_lval Format.std_formatter lval2;*)
+							let v1 = !Db.Value.access (Kstmt stmt) lval in
+							Printf.printf "----set v1v2\n";
+							Db.Value.pretty Format.std_formatter v1;
+							Printf.printf "\n";
+							let v2 = !Db.Value.access_after (Kstmt stmt) lval in
+							Db.Value.pretty Format.std_formatter v2;
+							Printf.printf "\n";
+							Printf.printf "++++set v1v2\n"
+						| Call(lvalo,exp,expl,loc) ->
+							(
+								match lvalo with
+									| Some l ->
+										let v1 = !Db.Value.access (Kstmt stmt) l in
+										Printf.printf "----call v1\n";
+										Db.Value.pretty Format.std_formatter v1;
+										Printf.printf "\n";
+										Printf.printf "++++call v1\n"
+										
+									| _ ->
+										Printf.printf "lvalo\n"
+								)
+						| _ ->
+							Printf.printf "not Set\n"
+					)
+				| Loop (code_annotation , block , location , stmt1 , stmt2) ->
+					print_block block;
+					Printf.printf "\n"
+				| _ ->
+					Printf.printf "not Instr\n");
+		Printf.printf "++++++++stmt\n"
+		)block.bstmts
+	
+let print_function_body (fundec:fundec) = 
+	(*Cil.d_block Format.std_formatter fundec.sbody;
+	List.iter(fun var ->
+		Printf.printf "vname=%s\n" var.vname
+		) fundec.sbody.blocals;*)
+	List.iter(fun stmt ->
+		Printf.printf "--------stmt\n";
+		Cil.d_stmt Format.std_formatter stmt;
+		Printf.printf "\n";
+		(match stmt.skind with
+				| Instr (instr) ->
+					(match instr with
+						| Set(lval,exp,location) ->
+							(*let lval2 = visitFramacLval visitor lval in
+							!Ast_printer.d_lval Format.std_formatter lval2;*)
+							let v1 = !Db.Value.access (Kstmt stmt) lval in
+							Printf.printf "----set v1v2\n";
+							Db.Value.pretty Format.std_formatter v1;
+							Printf.printf "\n";
+							let v2 = !Db.Value.access_after (Kstmt stmt) lval in
+							Db.Value.pretty Format.std_formatter v2;
+							Printf.printf "\n";
+							Printf.printf "++++set v1v2\n"
+						| Call(lvalo,exp,expl,loc) ->
+							(
+								match lvalo with
+									| Some l ->
+										let v1 = !Db.Value.access (Kstmt stmt) l in
+										Printf.printf "----call v1\n";
+										Db.Value.pretty Format.std_formatter v1;
+										Printf.printf "\n";
+										Printf.printf "++++call v1\n"
+										
+									| _ ->
+										Printf.printf "lvalo\n"
+								)
+						| _ ->
+							Printf.printf "not Set\n"
+					)
+				| Loop (code_annotation , block , location , stmt1 , stmt2) ->
+					print_block block;
+					Printf.printf "\n"
+				| _ ->
+					Printf.printf "not Instr\n");
+		Printf.printf "++++++++stmt\n"
+		) fundec.sbody.bstmts
+	
 let visit_cilfile file = 
 	let loop_visitor = new Visitor.frama_c_inplace in
 	Printf.printf "%s\n" "before visit";
 	Visitor.visitFramacFile loop_visitor file
 	
 let print_proj_info = 
-	Printf.printf "工程名称:%s\n" Project.name;(*
+	Printf.printf "工程名称:%s\n" Project.name(*
 	Printf.printf "uname=%s\n" (Project.get_unique_name (Project.current()))*)
+
+(**get loop information*)
+let get_loop_infor fundec = 
+	List.iter (fun stmt ->
+		match stmt.skind with
+			| Loop (code_annotation , block , location , stmt1 , stmt2) ->
+				Printf.printf "%s\n" "loop info";
+				(*Printf.printf "%s\n" "----code_annotation";
+				List.iter(fun anno ->
+					Cil.d_code_annotation Format.std_formatter anno;
+					) code_annotation;
+				Printf.printf "%s\n" "++++code_annotation";
+				Printf.printf "%s\n" "----block";
+				Cil.d_block Format.std_formatter block;
+				Printf.printf "%s\n" "++++block";*)
+				Printf.printf "%s\n" "----block var";
+				List.iter( fun varinfo ->
+					Printf.printf "%s\n" varinfo.vname;
+					) block.blocals;
+				Printf.printf "%s\n" "++++block var";
+				Printf.printf "%s\n" "----stmt1 succs";
+				p_stmt_succs stmt1;
+				Printf.printf "%s\n" "++++stmt1 succs";
+				Printf.printf "%s\n" "----stmt2 succs";
+				p_stmt_succs stmt2;
+				Printf.printf "%s\n" "++++stmt2 succs";
+				
+				Printf.printf "%s\n" "----stmt1 preds";
+				p_stmt_preds stmt1;
+				Printf.printf "%s\n" "++++stmt1 preds";
+				Printf.printf "%s\n" "----stmt2 preds";
+				p_stmt_preds stmt2;
+				Printf.printf "%s\n" "++++stmt2 preds";
+				(*let (p1,p2) = location in
+				let mkPosition location : Lexing.position (*pos_fname pos_lnum pos_bol pos_cnum*) =
+					{Lexing.pos_fname=(location).Lexing.pos_fname;
+					pos_lnum=(location).Lexing.pos_lnum+2;
+					pos_bol=(location).Lexing.pos_bol;
+					pos_cnum=(location).Lexing.pos_cnum;} in
+					
+				let new_loc = mkPosition (fst location) in
+				
+				Printf.printf "new_loc.pos_fname=%s\n" (p1).Lexing.pos_fname;
+				(p1).Lexing.pos_lnum=(p1).Lexing.pos_lnum+1;
+				Printf.printf "new_loc.loc_lnum=%d\n" (new_loc).Lexing.pos_lnum;
+				let guard = Cil.mkString (new_loc,p2) "mkString op" in
+				
+				let mystmt = mkStmt ~ghost:false ~valid_sid:true (Break (new_loc,p2)) in
+				let myifstmt=mkStmt ~ghost:false ~valid_sid:false (If (guard,block,block,(new_loc,p2))) in
+				(**停不了了*)
+				
+				Printf.printf "%s\n" "mystmt begin";
+				Cil.d_stmt Format.std_formatter myifstmt;
+				Printf.printf "\n%s\n" "mystmt end";
+				let stmtl=[mystmt;] in
+				let mywhilestmt = Cil.mkWhile guard stmtl in
+				Printf.printf "%s\n" "我的语句begin";
+				List.iter(fun sm -> 
+					Cil.d_stmt Format.std_formatter sm;
+					) mywhilestmt;
+				Printf.printf "\n%s\n" "我的语句end";*)
+			| _ -> Printf.printf "%s\n" "other info";
+				(*Printf.printf "%s\n" "----code_annotation";
+				List.iter(fun anno ->
+					Cil.d_code_annotation Format.std_formatter anno;
+					) code_annotation;
+				Printf.printf "%s\n" "++++code_annotation";
+				Printf.printf "%s\n" "----block";
+				Cil.d_block Format.std_formatter block;
+				Printf.printf "%s\n" "++++block";*)
+				Printf.printf "%s\n" "----stmt succs";
+				List.iter(fun succe ->
+					Cil.d_stmt Format.std_formatter succe;
+					)stmt.succs;
+				Printf.printf "\n";
+				Printf.printf "%s\n" "++++stmt succs";
+				Printf.printf "%s\n" "----stmt preds";
+				List.iter(fun preds ->
+					Cil.d_stmt Format.std_formatter preds;
+					)stmt.preds;
+				Printf.printf "\n";
+				Printf.printf "%s\n" "++++stmt preds";
+				) fundec.sallstmts
+				

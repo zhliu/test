@@ -138,7 +138,7 @@ let rec processOneFile (cil: Cil_types.file) =
 					Printf.printf "Gvar:varinfo.vname=%s\n" varinfo.vname;
 				| (GFun (fundec,location)) -> 
 					Printf.printf "%s\n" "GFun:";
-					Printf.printf "%s" "函数位置:";
+					(*Printf.printf "%s" "函数位置:";
 					Cil.d_loc Format.std_formatter location;
 					Printf.printf "%s" "**\n";
 					(*Printf.printf "\tlocation.file=%s\n" (get_loc_str location);*)
@@ -153,12 +153,15 @@ let rec processOneFile (cil: Cil_types.file) =
 					List.iter (fun ele ->
 						Printf.printf "%s\n" ele.vname;
 						) fundec.sformals;
-					Printf.printf "%s\n" "++++fundec.sformals";
+					Printf.printf "%s\n" "++++fundec.sformals";*)
 					
 					Cfg.clearCFGinfo ~clear_id:false fundec;
 					Cfg.cfgFun fundec;
+					(*Function_analysis.get_loop_infor fundec;*)
 					Function_analysis.count_loop_number fundec;
-					Function_analysis.print_function_stmts fundec visitor;
+					(*Function_analysis.p_visitor visitor;
+					Function_analysis.print_function_stmts fundec visitor;*)
+					Function_analysis.print_function_body fundec;
 					(*let num = Cfg.cfgFun fundec in
 					Printf.printf "\tCfg.cfgFun:num=%d\n" num;*)
 					let dotName = "/home/lzh/"^fundec.svar.vname^".dot" in
@@ -291,5 +294,7 @@ let theMain () =
 	);
 	Ast.get ();
 	Printf.printf "%s\n" "over";
+	Printf.printf "Db.Value.is_computed=%b\n" (Db.Value.is_computed ());
+	if not (Db.Value.is_computed ()) then !Db.Value.compute ();
 	processOneFile (Ast.get ());
 	(*Function_analysis.print_proj_info;*)
