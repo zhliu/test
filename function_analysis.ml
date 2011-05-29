@@ -242,51 +242,7 @@ let rec print_block block =
 		)block.bstmts
 	
 let print_function_body (fundec:fundec) = 
-	(*Cil.d_block Format.std_formatter fundec.sbody;
-	List.iter(fun var ->
-		Printf.printf "vname=%s\n" var.vname
-		) fundec.sbody.blocals;*)
-	List.iter(fun stmt ->
-		Printf.printf "--------stmt\n";
-		Cil.d_stmt Format.std_formatter stmt;
-		Printf.printf "\n";
-		(match stmt.skind with
-				| Instr (instr) ->
-					(match instr with
-						| Set(lval,exp,location) ->
-							(*let lval2 = visitFramacLval visitor lval in
-							!Ast_printer.d_lval Format.std_formatter lval2;*)
-							let v1 = !Db.Value.access (Kstmt stmt) lval in
-							Printf.printf "----set v1v2\n";
-							Db.Value.pretty Format.std_formatter v1;
-							Printf.printf "\n";
-							let v2 = !Db.Value.access_after (Kstmt stmt) lval in
-							Db.Value.pretty Format.std_formatter v2;
-							Printf.printf "\n";
-							Printf.printf "++++set v1v2\n"
-						| Call(lvalo,exp,expl,loc) ->
-							(
-								match lvalo with
-									| Some l ->
-										let v1 = !Db.Value.access (Kstmt stmt) l in
-										Printf.printf "----call v1\n";
-										Db.Value.pretty Format.std_formatter v1;
-										Printf.printf "\n";
-										Printf.printf "++++call v1\n"
-										
-									| _ ->
-										Printf.printf "lvalo\n"
-								)
-						| _ ->
-							Printf.printf "not Set\n"
-					)
-				| Loop (code_annotation , block , location , stmt1 , stmt2) ->
-					print_block block;
-					Printf.printf "\n"
-				| _ ->
-					Printf.printf "not Instr\n");
-		Printf.printf "++++++++stmt\n"
-		) fundec.sbody.bstmts
+	print_block fundec.sbody
 	
 let visit_cilfile file = 
 	let loop_visitor = new Visitor.frama_c_inplace in
