@@ -292,6 +292,8 @@ let theMain () =
 				     Kernel_function.pretty_name Format.std_formatter kf;
 				 end
 	);
+	let info = Dynamic.get ~plugin:"Wp" "run" (Datatype.func Datatype.unit Datatype.unit) in
+	
 	Ast.get ();
 	Printf.printf "%s\n" "over";
 	Printf.printf "Db.Value.is_computed=%b\n" (Db.Value.is_computed ());

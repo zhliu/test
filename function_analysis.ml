@@ -230,8 +230,12 @@ let rec print_block block =
 									| _ ->
 										Printf.printf "lvalo\n"
 								)
+						| Code_annot(code_annotation,location) ->
+							Printf.printf "Code_annot\n"
+						| Skip(location) ->
+							Printf.printf "Skip\n"
 						| _ ->
-							Printf.printf "not Set\n"
+							Printf.printf "Asm\n"
 					)
 				| Loop (code_annotation , block , location , stmt1 , stmt2) ->
 					print_block block;
@@ -243,6 +247,22 @@ let rec print_block block =
 	
 let print_function_body (fundec:fundec) = 
 	print_block fundec.sbody
+	(*List.iter(fun var ->
+		Printf.printf "%s\nattribute:" var.vname;
+			List.iter(fun attr ->
+			Cil.d_attr Format.std_formatter attr;
+			Printf.printf "\n"
+			)var.vattr;
+		(
+			match var.vtype with
+				| TInt (ikind , attributes) ->
+					Printf.printf "int var\n"
+				| TArray (typ , exp , bitsSizeofTypCache , attributes) ->
+					Printf.printf "array var\n"
+				| _ -> 
+					Printf.printf "other var\n"
+		)
+		)fundec.slocals*)
 	
 let visit_cilfile file = 
 	let loop_visitor = new Visitor.frama_c_inplace in
@@ -250,7 +270,7 @@ let visit_cilfile file =
 	Visitor.visitFramacFile loop_visitor file
 	
 let print_proj_info = 
-	Printf.printf "工程名称:%s\n" Project.name(*
+	Printf.printf "Project.name:%s\n" Project.name(*
 	Printf.printf "uname=%s\n" (Project.get_unique_name (Project.current()))*)
 
 (**get loop information*)
