@@ -1,5 +1,7 @@
 open Cil
 open Cil_types
+open File
+open Annotations
 open Visitor
 open Project
 open Callgraph
@@ -198,17 +200,20 @@ let print_function_stmts fundec visitor=
 		(*visitor#pop_stmt stmt;*)
 		Printf.printf "\n";
 		) fundec.sallstmts
-let rec print_block block = 
+
+let rec print_block block visitor: = 
 	List.iter(fun stmt ->
 		Printf.printf "--------stmt\n";
 		Cil.d_stmt Format.std_formatter stmt;
 		Printf.printf "\n";
+		let vis=(
 		(match stmt.skind with
 				| Instr (instr) ->
 					(match instr with
 						| Set(lval,exp,location) ->
 							(*let lval2 = visitFramacLval visitor lval in
 							!Ast_printer.d_lval Format.std_formatter lval2;*)
+							visitor#vexpr exp;
 							let v1 = !Db.Value.access (Kstmt stmt) lval in
 							Printf.printf "----set v1v2\n";
 							Db.Value.pretty Format.std_formatter v1;
@@ -245,8 +250,8 @@ let rec print_block block =
 		Printf.printf "++++++++stmt\n"
 		)block.bstmts
 	
-let print_function_body (fundec:fundec) = 
-	print_block fundec.sbody
+let print_function_body (fundec:fundec) visitor= 
+	print_block fundec.sbody visitor
 	(*List.iter(fun var ->
 		Printf.printf "%s\nattribute:" var.vname;
 			List.iter(fun attr ->
@@ -355,4 +360,33 @@ let get_loop_infor fundec =
 				Printf.printf "\n";
 				Printf.printf "%s\n" "++++stmt preds";
 				) fundec.sallstmts
-				
+
+
+class non_zero_divisor prj = object (self)
+	inherit Visitor.generic_frama_c_visitor prj (Cil.copy_visit ())
+	method vexpr e = match e.enode with
+	| BinOp((Div|Mod) ,_, e2 ,_) ->
+		let t = Cil.typeOf e2 in
+		let logic_e2 =
+			Logic_const.term
+				(TCastE(t,Logic_utils.expr_to_term ~cast:true e2 )) (Ctype t)
+		in
+		let assertion = Logic_const.prel(Rneq , logic_e2 , Cil.lzero()) in
+	
+		let stmt = Extlib.the(self#current_stmt) in
+
+		Queue.add
+		(fun () ->
+			Cil.d_stmt Format.std_formatter stmt;
+			(*Annotations.add_assert stmt [Ast.self] ~before:true assertion*)
+		);
+			self#get_filling_actions;
+		DoChildren
+	| _ -> DoChildren
+end
+
+let create_syntactic_check_project () =
+	File.create_project_from_visitor " syntactic check " (new non_zero_divisor )
+	
+		
+let visitor = new non_zero_divisor (Project.current ())
